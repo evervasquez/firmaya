@@ -1,0 +1,29 @@
+# --- Maven ---
+target/
+dependency-reduced-pom.xml
+.mvn/wrapper/maven-wrapper.jar
+
+# --- macOS ---
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Certificados y material de clave: NUNCA deben entrar al repositorio ---
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.key
+*.pem
+
+# --- Salidas generadas por el propio firmador ---
+pruebas/*\[R\].pdf
+
+# --- Entornos de desarrollo ---
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/

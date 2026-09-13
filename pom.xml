@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>pe.firmador</groupId>
+  <artifactId>firmador-reniec</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+  <name>Firmador RENIEC</name>
+  <description>Firmaya, firmador PAdES-B compatible con ReFirma PDF 1.6</description>
+
+  <properties>
+    <maven.compiler.release>17</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <dss.version>6.5</dss.version>
+    <!-- Ambas deben coincidir con las que arrastra DSS 6.5; se fijan aqui porque este
+         proyecto las usa directamente (geometria de pagina y certificado de prueba). -->
+    <pdfbox.version>3.0.8</pdfbox.version>
+    <bouncycastle.version>1.85</bouncycastle.version>
+    <slf4j.version>2.0.17</slf4j.version>
+    <javafx.version>21.0.8</javafx.version>
+    <junit.version>6.0.0</junit.version>
+    <assertj.version>3.27.6</assertj.version>
+    <exec.plugin.version>3.5.1</exec.plugin.version>
+  </properties>
+
+  <dependencies>
+    <!-- Motor de firma PAdES: implementacion de referencia de ETSI, la misma familia
+         de librerias que usa ReFirma PDF 1.6 (alli en su version 5.4.3). -->
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-pades-pdfbox</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <!-- Lectura del almacen PKCS#12 (.p12) y acceso a la clave privada. -->
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-token</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <!-- Implementacion obligatoria de dss-utils; sin ella DSS falla en tiempo de ejecucion. -->
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-utils-apache-commons</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <!-- Implementacion de CMS que exige DSS 6.5: la variante en memoria, equivalente a
+         la que usaba DSS 5.4.3 en ReFirma. La alternativa dss-cms-stream solo hace falta
+         para documentos que no caben en memoria. -->
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-cms-object</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <!-- Lectura de la firma ya incrustada, para el modo de verificacion. -->
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-validation</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+    <!-- Clientes HTTP de OCSP, CRL y sellado de tiempo. Solo los usa el nivel PAdES-LT,
+         que necesita incrustar la prueba de revocacion y un sello de tiempo. -->
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-service</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+
+    <!-- Implementacion del analizador de CRL. dss-crl-parser solo trae la interfaz;
+         sin una implementacion el nivel LT no puede incrustar la lista de revocacion. -->
+    <dependency>
+      <groupId>eu.europa.ec.joinup.sd-dss</groupId>
+      <artifactId>dss-crl-parser-x509crl</artifactId>
+      <version>${dss.version}</version>
+    </dependency>
+
+    <!-- Interfaz grafica de escritorio. JavaFX 21 es la linea LTS que corre sobre el JDK 17
+         instalado; JavaFX 26 exigiria JDK 25. -->
+    <dependency>
+      <groupId>org.openjfx</groupId>
+      <artifactId>javafx-controls</artifactId>
+      <version>${javafx.version}</version>
+    </dependency>
+
+    <!-- Lectura del numero y tamano de paginas para colocar el sello. -->
+    <dependency>
+      <groupId>org.apache.pdfbox</groupId>
+      <artifactId>pdfbox</artifactId>
+      <version>${pdfbox.version}</version>
+    </dependency>
+    <!-- DSS ya la usa; se declara explicita porque las pruebas generan un certificado propio. -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <version>${bouncycastle.version}</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <version>${slf4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <version>${slf4j.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>${assertj.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <finalName>firmador</finalName>
+
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+      </resource>
+      <!-- Los escudos viven en assets/ y se empaquetan como recurso sin duplicar el archivo:
+           escudo-nacional.png es el que se dibuja (rasterizado del SVG de dominio publico) y
+           -->
+      <resource>
+        <directory>assets</directory>
+        <includes>
+          <include>escudo-nacional.png</include>
+        </includes>
+      </resource>
+    </resources>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.0</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.5.4</version>
+        <configuration>
+          <!-- Las pruebas del sello usan AWT: sin esto macOS levanta un icono en el Dock. -->
+          <systemPropertyVariables>
+            <java.awt.headless>true</java.awt.headless>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.1</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>pe.firmador.Lanzador</mainClass>
+                </transformer>
+                <!-- DSS descubre sus implementaciones por ServiceLoader: hay que fusionar
+                     los META-INF/services de todos los jar o el JAR unico no firma. -->
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+              </transformers>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>module-info.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- ./mvnw -Pdmg package  genera target/instalador/*.dmg con el runtime incluido. -->
+    <profile>
+      <id>dmg</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>${exec.plugin.version}</version>
+            <executions>
+              <execution>
+                <id>empaquetar-dmg</id>
+                <phase>package</phase>
+                <goals><goal>exec</goal></goals>
+                <configuration>
+                  <executable>${project.basedir}/scripts/empaquetar-dmg.sh</executable>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+</project>
