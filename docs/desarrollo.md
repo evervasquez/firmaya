@@ -199,3 +199,25 @@ advertencia.
 - **Aviso de arranque.** Al abrir la ventana, JavaFX imprime en el registro
   `Unsupported JavaFX configuration: classes were loaded from 'unnamed module'`. Es inofensivo y
   se debe a que JavaFX viaja en el classpath y no en el `module-path`.
+
+## Versionado
+
+La versión vive en el archivo **`VERSION`** de la raíz, que es la fuente única.
+
+`pom.xml` debe declarar la misma. El script de empaquetado comprueba que coincidan y **se
+detiene** si no lo hacen, para no generar un instalador con una etiqueta que no corresponde:
+
+```
+ERROR: VERSION dice '1.1.0' y pom.xml dice '1.0.0'.
+Corrija el <version> del pom.xml para que coincida con el archivo VERSION.
+```
+
+Al publicar una versión nueva:
+
+1. Actualizar `VERSION` y el `<version>` del `pom.xml`
+2. Añadir la entrada correspondiente en `CHANGELOG.md`
+3. `./scripts/empaquetar-dmg.sh`
+4. Etiquetar con `vX.Y.Z` y adjuntar el `.dmg` al *release* de GitHub
+
+El proyecto sigue [versionado semántico](https://semver.org/lang/es/): *patch* para
+correcciones, *minor* para funcionalidad nueva compatible, *major* para cambios que rompan.

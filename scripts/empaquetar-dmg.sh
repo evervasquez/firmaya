@@ -14,7 +14,15 @@ RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RAIZ"
 
 NOMBRE_APP="Firmaya"
-VERSION="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -1)"
+# La version vive en el archivo VERSION, que es la fuente unica. El pom.xml debe
+# coincidir: si no, se detiene en vez de generar un instalador mal etiquetado.
+VERSION="$(tr -d '[:space:]' < VERSION)"
+VERSION_POM="$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' pom.xml | head -1)"
+if [[ "$VERSION" != "$VERSION_POM" ]]; then
+  echo "ERROR: VERSION dice '$VERSION' y pom.xml dice '$VERSION_POM'." >&2
+  echo "Corrija el <version> del pom.xml para que coincida con el archivo VERSION." >&2
+  exit 1
+fi
 JAR="target/firmador.jar"
 ENTRADA="target/dmg-entrada"
 SALIDA="target/instalador"
